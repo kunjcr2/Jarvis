@@ -14,6 +14,8 @@ import pyttsx3
 import speech_recognition as sr
 import webbrowser
 import tkinter as tk
+import threading
+import requests
 
 # Adds History to a text file
 def history(text):
@@ -64,13 +66,21 @@ def command(cmd):
     elif ("open" in cmd):
         text = cmd.replace("open","").strip()
         URL = f"https://www.{text.replace(" ","")}.com"
-        webbrowser.open(URL)
     elif "on map" in cmd:
         text = cmd.replace("on map","").strip()
         URL = f"https://www.google.co.in/maps/search/{text.replace(" ","+")}/"
-        webbrowser.open(URL)
     else:
         textToWeb(cmd)
+    webbrowser.open(URL)
+
+def get_youtube_video_id(query):
+    api_key = "youtubeAPI.json"  # replace with your YouTube API key
+    url = f"https://www.googleapis.com/youtube/v3/search?part=id&q={query}&type=video&key={api_key}"
+    response = requests.get(url)
+    data = response.json()
+    if data["items"]:
+        return data["items"][0]["id"]["videoId"]
+    return None
 
 # When you say "Hello", only then it goes ahead or else ACCESS DENIED
 def scrtKey(recognizer):
@@ -98,7 +108,7 @@ def textToWeb(text):
 def eventOcc(event):
     root.configure(bg='white')
     btn.configure(bg='black',fg='white',text='Activated')
-    scrtKey(initializeRecognizer())
+    threading.Thread(target=speechToText, args=(initializeRecognizer(),)).start()
 
 # Opens the window w a button
 def window():
