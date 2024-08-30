@@ -20,13 +20,15 @@ import requests
 # Adds History to a text file
 def history(text):
     print("Adding to History")
-    with open("history.txt","a") as file:
-        file.write(text+"\n")
+    with open("history.txt", "a") as file:
+        file.write(text + "\n")
 
 # Variables for Tkinter
 root = tk.Tk()
-btn = tk.Button(root,text="Activate Jarvis")
-click = 0
+btn = tk.Button(root, text="Activate Jarvis")
+
+# Global variable to keep track if "Jarvis" has been recognized
+activated = False
 
 # Creates and returns a Recognizer
 def initializeRecognizer():
@@ -45,11 +47,9 @@ def speechToText(recognizer):
         data = recognizer.recognize_google(audio)
         print("Taking you to the web...")
         command(data)
-        history(data)
     except sr.UnknownValueError:
         textToSpeech("We are not able to recognize what you said")
-    root.configure(bg='black')
-    btn.configure(bg='white',fg='black',text='Activate jarvis')
+    resetUI()
 
 # SAYS what you want it to say
 def textToSpeech(text):
@@ -60,18 +60,20 @@ def textToSpeech(text):
 
 # Some of the standard commands
 def command(cmd):
-    if ("search" in cmd):
-        text = cmd.replace("search","").strip()
+    URL = None
+    if "search" in cmd:
+        text = cmd.replace("search", "").strip()
         textToWeb(text)
-    elif ("open" in cmd):
-        text = cmd.replace("open","").strip()
-        URL = f"https://www.{text.replace(" ","")}.com"
+    elif "open" in cmd:
+        text = cmd.replace("open", "").strip()
+        URL = f"https://www.{text.replace(' ', '')}.com"
     elif "on map" in cmd:
-        text = cmd.replace("on map","").strip()
-        URL = f"https://www.google.co.in/maps/search/{text.replace(" ","+")}/"
+        text = cmd.replace("on map", "").strip()
+        URL = f"https://www.google.co.in/maps/search/{text.replace(' ', '+')}/"
     else:
         textToWeb(cmd)
-    webbrowser.open(URL)
+    if URL:
+        webbrowser.open(URL)
 
 def get_youtube_video_id(query):
     api_key = "youtubeAPI.json"  # replace with your YouTube API key
@@ -84,47 +86,55 @@ def get_youtube_video_id(query):
 
 # When you say "Hello", only then it goes ahead or else ACCESS DENIED
 def scrtKey(recognizer):
-    textToSpeech("What is your name?")
-    with sr.Microphone() as source:
-        audio = recognizer.listen(source)
-        
-    try:
-        data = recognizer.recognize_google(audio)
-        if "Hello" in data:
-            textToSpeech("Welcome Sir ! How can I help you?")
-            window()
-        else:
-            print("Access Denied")
-            scrtKey(initializeRecognizer())
-    except sr.UnknownValueError:
-        textToSpeech("We are not able to recognize what you said")
+    global activated
+    if not activated:
+        textToSpeech("What is your name?")
+        with sr.Microphone() as source:
+            audio = recognizer.listen(source)
+        try:
+            data = recognizer.recognize_google(audio)
+            if "hello" in data:
+                print("Recognizing...")
+                textToSpeech("Welcome Sir! How can I help you?")
+                activated = True
+                speechToText(initializeRecognizer())
+            else:
+                print("Access Denied")
+                scrtKey(initializeRecognizer())
+        except sr.UnknownValueError:
+            textToSpeech("We are not able to recognize what you said")
 
 # Takes the text and opens URL
 def textToWeb(text):
-    URL = f"https://google.com/search?q={text.replace(' ','+')}"
+    URL = f"https://google.com/search?q={text.replace(' ', '+')}"
     webbrowser.open(URL)
 
 # Changes the Window just after clicking the button
 def eventOcc(event):
     root.configure(bg='white')
-    btn.configure(bg='black',fg='white',text='Activated')
-    threading.Thread(target=speechToText, args=(initializeRecognizer(),)).start()
+    btn.configure(bg='black', fg='white', text='Activated')
+    threading.Thread(target=scrtKey, args=(initializeRecognizer(),)).start()
 
-# Opens the window w a button
+# Resets UI elements back to default
+def resetUI():
+    root.configure(bg='black')
+    btn.configure(bg='white', fg='black', text='Activate Jarvis')
+
+# Opens the window with a button
 def window():
     root.geometry("400x400")
-    root.resizable(False,False)
+    root.resizable(False, False)
     root.configure(bg='black')
 
-    btn.place(width=100,height=50,x=200, y=200, anchor=tk.CENTER)
+    btn.place(width=100, height=50, x=200, y=200, anchor=tk.CENTER)
     btn.configure(bg='white')
-    btn.bind("<Button-1>",eventOcc)
+    btn.bind("<Button-1>", eventOcc)
 
     tk.mainloop()
 
 # The driver method
 def driver():
-    scrtKey(initializeRecognizer())
+    window()
 
 # runs driver
 driver()
